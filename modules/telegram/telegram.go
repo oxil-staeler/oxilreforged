@@ -32,7 +32,7 @@ func SendTextToTelegram(botToken, chatID, text string) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("Telegram sendMessage failed: %d", resp.StatusCode)
+		return fmt.Errorf("sendMessage failed: %d", resp.StatusCode)
 	}
 	return nil
 }
@@ -79,7 +79,7 @@ func SendZipToTelegram(botToken, chatID, caption, zipPath string) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("Telegram sendDocument failed: %d", resp.StatusCode)
+		return fmt.Errorf("sendDocument failed: %d", resp.StatusCode)
 	}
 
 	return nil
